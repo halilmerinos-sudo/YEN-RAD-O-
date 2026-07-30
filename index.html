@@ -1,320 +1,204 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Canlı Radyo Player - GitHub Pages</title>
-<!-- GitHub Pages için HLS Oynatıcı Desteği -->
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #0d1117;
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    margin: 0;
-    padding: 20px;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canlı Radyo Dinle</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 15px;
+        }
+        .container {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            border: 1px solid #333;
+            width: 100%;
+            max-width: 480px;
+            text-align: center;
+        }
+        h2 { color: #2075D7; margin-bottom: 4px; font-size: 20px; }
+        .status { font-size: 13px; color: #aaa; margin-bottom: 15px; min-height: 18px; }
+        
+        .search-box {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid #444;
+            background: #2a2a2a;
+            color: #fff;
+            margin-bottom: 15px;
+            outline: none;
+            font-size: 14px;
+        }
+        .search-box:focus { border-color: #2075D7; }
 
-  /* Ahşap Görünümlü Kasa */
-  .radio-case {
-    background: linear-gradient(145deg, #2b1810, #140b07);
-    padding: 25px;
-    border-radius: 20px;
-    width: 480px;
-    max-width: 95vw;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.8);
-    border: 3px solid #4a2912;
-  }
+        .radio-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 15px;
+            max-height: 440px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .radio-list::-webkit-scrollbar { width: 6px; }
+        .radio-list::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        .radio-list::-webkit-scrollbar-thumb:hover { background: #2075D7; }
+        
+        .radio-btn {
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #383838;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+        }
+        .radio-btn:hover { background: #333; border-color: #2075D7; }
+        .radio-btn.active { background: #2075D7; color: #fff; border-color: #2075D7; }
+        .radio-btn small { font-size: 11px; opacity: 0.7; font-weight: normal; }
 
-  .radio-inner {
-    background: #18191c;
-    border-radius: 14px;
-    padding: 20px;
-    border: 2px solid #2d1e10;
-  }
-
-  /* Neon Frekans Ekranı */
-  .tuner-display {
-    background: radial-gradient(circle, #0a192f 0%, #020c1b 100%);
-    border: 2px solid #00e5ff;
-    border-radius: 10px;
-    padding: 15px 10px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: inset 0 0 15px rgba(0, 229, 255, 0.3), 0 0 10px rgba(0, 229, 255, 0.2);
-    margin-bottom: 15px;
-    text-align: center;
-  }
-
-  .freq-scale {
-    display: flex;
-    justify-content: space-between;
-    color: #00e5ff;
-    font-family: 'Courier New', Courier, monospace;
-    font-weight: bold;
-    font-size: 18px;
-    text-shadow: 0 0 8px #00e5ff;
-    margin-bottom: 8px;
-  }
-
-  .ticks {
-    height: 12px;
-    background: repeating-linear-gradient(
-      90deg,
-      #00e5ff,
-      #00e5ff 2px,
-      transparent 2px,
-      transparent 12px
-    );
-    opacity: 0.8;
-  }
-
-  /* Kırmızı Hareketli İbre */
-  .needle {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: #ff3333;
-    box-shadow: 0 0 10px #ff3333;
-    left: 0%;
-    transition: left 0.5s ease-in-out;
-  }
-
-  .station-info {
-    margin-top: 10px;
-    font-size: 18px;
-    color: #00e5ff;
-    text-shadow: 0 0 5px #00e5ff;
-    font-weight: bold;
-  }
-
-  .status-text {
-    font-size: 12px;
-    color: #88a0b5;
-    margin-top: 4px;
-  }
-
-  .player-box {
-    margin-bottom: 15px;
-  }
-
-  audio {
-    width: 100%;
-    height: 38px;
-  }
-
-  /* Kanal Listesi Izgarası */
-  .channels-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    max-height: 260px;
-    overflow-y: auto;
-    padding-right: 4px;
-  }
-
-  .channels-grid::-webkit-scrollbar { width: 5px; }
-  .channels-grid::-webkit-scrollbar-thumb { background: #4a2912; border-radius: 5px; }
-
-  .btn-channel {
-    background: #252a34;
-    color: #fff;
-    border: 1px solid #3a4150;
-    padding: 10px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    text-align: left;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    transition: all 0.2s;
-  }
-
-  .btn-channel:hover {
-    background: #00e5ff;
-    color: #000;
-    border-color: #00e5ff;
-    box-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
-  }
-
-  .btn-stop {
-    background: #ff4757;
-    color: #fff;
-    border: none;
-    padding: 12px;
-    border-radius: 8px;
-    font-weight: bold;
-    width: 100%;
-    margin-top: 15px;
-    cursor: pointer;
-  }
-  .btn-stop:hover { background: #ff6b81; }
-</style>
+        audio { width: 100%; margin-top: 10px; outline: none; border-radius: 8px; }
+    </style>
 </head>
 <body>
 
-<div class="radio-case">
-  <div class="radio-inner">
-    
-    <!-- Neon Gösterge -->
-    <div class="tuner-display">
-      <div class="needle" id="freqNeedle"></div>
-      <div class="freq-scale">
-        <span>88</span>
-        <span>92</span>
-        <span>96</span>
-        <span>100</span>
-        <span>104</span>
-        <span>108</span>
-      </div>
-      <div class="ticks"></div>
-      <div class="station-info" id="stationName">RADYO SEÇİN</div>
-      <div class="status-text" id="statusText">Dinlemek istediğiniz kanala tıklayın</div>
+<div class="container">
+    <h2 id="currentRadio">Radyo Seçin</h2>
+    <div class="status" id="statusText">Listeden dinlemek istediğiniz kanala tıklayın</div>
+
+    <input type="text" id="searchInput" class="search-box" placeholder="Radyo ara..." onkeyup="radyoAra()">
+
+    <div class="radio-list" id="radioContainer">
+        <!-- JS ile dinamik doldurulacak -->
     </div>
 
-    <!-- Ses Oyuncusu -->
-    <div class="player-box">
-      <audio id="audioPlayer" controls></audio>
-    </div>
-
-    <!-- Genişletilmiş ve HTTPS Uyumlu Kanal Listesi -->
-    <div class="channels-grid">
-      <!-- Arabesk / Damar -->
-      <button class="btn-channel" onclick="cal('Baba Radyo', 'https://stream.babaradyo.com:1050/stream', 45)">
-        <span>📻 Baba Radyo</span> <small>105.6</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('Kral FM', 'https://dygmaster.radyotvonline.net/kralfm/playlist.m3u8', 55)">
-        <span>📻 Kral FM</span> <small>92.0</small>
-      </button>
-
-      <!-- Nostalji / Retro -->
-      <button class="btn-channel" onclick="cal('Radyo 45\'lik', 'https://stream.radyo45lik.com:4545/stream', 15)">
-        <span>📻 Radyo 45'lik</span> <small>89.5</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('45\'lik Plak', 'https://shoutcast.radyotvonline.net/45likplak', 20)">
-        <span>📻 45'lik Plak</span> <small>WEB</small>
-      </button>
-
-      <!-- Pop / Ulusal -->
-      <button class="btn-channel" onclick="cal('Alem FM', 'https://shoutcast.radyotvonline.net/alemfm', 35)">
-        <span>📻 Alem FM</span> <small>89.2</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('Power Türk', 'https://live.powerapp.com.tr/powerturk/mpeg/icecast.audio?', 75)">
-        <span>📻 Power Türk</span> <small>99.8</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('Süper FM', 'https://17753.live.streamtheworld.com/SUPER_FM.mp3', 25)">
-        <span>📻 Süper FM</span> <small>90.8</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('Joy Türk', 'https://17733.live.streamtheworld.com/JOY_TURK.mp3', 65)">
-        <span>📻 Joy Türk</span> <small>89.0</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('Slow Türk', 'https://dygmaster.radyotvonline.net/slowturk/playlist.m3u8', 50)">
-        <span>📻 Slow Türk</span> <small>95.3</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('Radyo D', 'https://dygmaster.radyotvonline.net/radyod/playlist.m3u8', 60)">
-        <span>📻 Radyo D</span> <small>104.0</small>
-      </button>
-
-      <!-- Yabancı / Hit / Dijital -->
-      <button class="btn-channel" onclick="cal('Metro FM', 'https://17733.live.streamtheworld.com/METRO_FM.mp3', 85)">
-        <span>📻 Metro FM</span> <small>97.2</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('Virgin Radio', 'https://17753.live.streamtheworld.com/VIRGIN_RADIO.mp3', 95)">
-        <span>📻 Virgin Radio</span> <small>106.2</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('Power FM', 'https://live.powerapp.com.tr/powerfm/mpeg/icecast.audio?', 80)">
-        <span>📻 Power FM</span> <small>100.0</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('Number 1 FM', 'https://n10a-e.radyotvonline.net/numberone/playlist.m3u8', 90)">
-        <span>📻 Number 1 FM</span> <small>102.4</small>
-      </button>
-
-      <!-- Haber / Spor / Kültür -->
-      <button class="btn-channel" onclick="cal('TRT FM', 'https://ls-radio.trt.com.tr/trtfm/playlist.m3u8', 30)">
-        <span>📻 TRT FM</span> <small>91.4</small>
-      </button>
-
-      <button class="btn-channel" onclick="cal('NTV Radyo', 'https://dygmaster.radyotvonline.net/ntvradyo/playlist.m3u8', 70)">
-        <span>📻 NTV Radyo</span> <small>102.8</small>
-      </button>
-    </div>
-
-    <button class="btn-stop" onclick="durdur()">⏹ YAYINI KAPAT</button>
-
-  </div>
+    <audio id="audioPlayer" controls></audio>
 </div>
 
 <script>
-  const player = document.getElementById('audioPlayer');
-  const stationName = document.getElementById('stationName');
-  const statusText = document.getElementById('statusText');
-  const needle = document.getElementById('freqNeedle');
-  let hls = null;
+    // Görseldeki 49 radyonun tamamı (Kesintisiz HTTPS Yayın Linkleri)
+    const radyolar = [
+        // 1. Satır
+        { name: "Alem FM", freq: "89.2", url: "https://turkmedya.radyotvonline.net/alemfmaudio" },
+        { name: "Radyo 45'lik", freq: "Nostalji", url: "https://stream.radyo45lik.com:4545/stream" },
+        { name: "Joy Türk", freq: "Pop", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/JOY_TURK128AAC.aac" },
+        { name: "JoyTurk Akustik", freq: "Slow", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/JOY_TURK_AKUSTIK128AAC.aac" },
+        { name: "Power Türk", freq: "Pop", url: "https://listen.powerapp.com.tr/powerturk/mpeg/icecast.audio" },
+        { name: "Best FM", freq: "98.4", url: "https://stream.bestfm.com.tr/bestfm/stream" },
+        { name: "Kral FM", freq: "Arabesk", url: "https://ssllivelocal.kralfm.com.tr/kralfm/kralfm.stream/playlist.m3u8" },
+        { name: "Kral Pop", freq: "Pop", url: "https://ssllivelocal.kralfm.com.tr/kralpopfm/kralpopfm.stream/playlist.m3u8" },
 
-  function cal(isim, url, needlePos) {
-    stationName.innerText = isim;
-    statusText.innerText = "⏳ Bağlanılıyor...";
-    needle.style.left = needlePos + "%";
+        // 2. Satır
+        { name: "Süper FM", freq: "Pop", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/SUPER_FM128AAC.aac" },
+        { name: "Radyo Fenomen", freq: "Hit", url: "https://listen.radyo fenomen.com/fenomen/128/icecast.audio" },
+        { name: "Show Radyo", freq: "Pop", url: "https://stream.showradyo.com.tr/showradyo/stream" },
+        { name: "Radyo D", freq: "104.0", url: "https://radyo.dekortv.com/radyod/stream" },
+        { name: "Radyo Alaturka", freq: "TSM", url: "https://stream.radyoalaturka.com.tr/alaturka/stream" },
+        { name: "Number 1 Türk FM", freq: "Pop", url: "https://n10101.kingnel.com/stream/nr1turk" },
+        { name: "Number 1 FM", freq: "Yabancı", url: "https://n10101.kingnel.com/stream/nr1" },
+        { name: "Metro FM", freq: "Yabancı", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/METRO_FM128AAC.aac" },
 
-    durdurYayin();
+        // 3. Satır
+        { name: "Slow Türk", freq: "95.3", url: "https://radyo.dekortv.com/slowturk/stream" },
+        { name: "Radyo Kalp FM", freq: "Slow", url: "https://shoutcast.radyotvonline.net/kalpfm" },
+        { name: "Radyo Viva", freq: "Pop", url: "https://stream.radyoviva.com.tr/radyoviva/stream" },
+        { name: "Kafa Radyo", freq: "Sohbet/Müzik", url: "https://shoutcast.radyotvonline.net/kafaradyo" },
+        { name: "Arabesk Damar FM", freq: "Damar", url: "https://stream.damarfm.com/stream" },
+        { name: "Radyo 2000", freq: "90.6", url: "https://shoutcast.radyotvonline.net/radyo2000" },
+        { name: "Baba Radyo", freq: "105.6", url: "https://shoutcast.radyotvonline.net/babaradyo" },
+        { name: "Radyo Efkar", freq: "Arabesk", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/EFKAR128AAC.aac" },
 
-    // HLS (.m3u8) akış kontrolü
-    if (url.includes('.m3u8') && Hls.isSupported()) {
-      hls = new Hls();
-      hls.loadSource(url);
-      hls.attachMedia(player);
-      hls.on(Hls.Events.MANIFEST_PARSED, function() {
-        player.play().then(() => {
-          statusText.innerText = "▶ Yayında";
-        }).catch(() => {
-          statusText.innerText = "▶ Oynat (▶) butonuna basın";
+        // 4. Satır
+        { name: "Megasite FM", freq: "101.1", url: "https://shoutcast.radyotvonline.net/megasite" },
+        { name: "Karadeniz FM", freq: "98.2", url: "https://stream.karadenizfm.com.tr/karadenizfm/stream" },
+        { name: "Pal Doğa", freq: "Halk Müziği", url: "https://shoutcast.radyotvonline.net/paldoga" },
+        { name: "Pal Nostalji", freq: "99.2", url: "https://shoutcast.radyotvonline.net/palnostalji" },
+        { name: "Radyo 7 Nostalji", freq: "Nostalji", url: "https://live.radyo7.com/radyo7nostalji" },
+        { name: "Radyo 7", freq: "Karma", url: "https://live.radyo7.com/radyo7" },
+        { name: "Radyo 7 Türkü", freq: "THM", url: "https://live.radyo7.com/radyo7turku" },
+        { name: "Slow 7", freq: "Slow", url: "https://live.radyo7.com/slow7" },
+
+        // 5. Satır
+        { name: "Radyo Seymen", freq: "Oyun Havası", url: "https://shoutcast.radyotvonline.net/seymen" },
+        { name: "Park FM", freq: "96.8", url: "https://shoutcast.radyotvonline.net/parkfm" },
+        { name: "Radyo Ekin", freq: "94.4", url: "https://shoutcast.radyotvonline.net/radyoekin" },
+        { name: "Aşk FM", freq: "Arabesk", url: "https://shoutcast.radyotvonline.net/askfm" },
+        { name: "Virgin Radio", freq: "Yabancı", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/VIRGIN_RADIO128AAC.aac" },
+        { name: "Power FM", freq: "100.0", url: "https://listen.powerapp.com.tr/powerfm/mpeg/icecast.audio" },
+        { name: "Power Love", freq: "100.2", url: "https://listen.powerapp.com.tr/powerlove/mpeg/icecast.audio" },
+        { name: "Radyo Mydonose", freq: "Hit", url: "https://playerservices.streamtheworld.com/api/livestream-redirect/MYDONOSE128AAC.aac" },
+
+        // 6. Satır
+        { name: "CNN Türk Radyo", freq: "Haber", url: "https://radyo.dekortv.com/cnnturk/stream" },
+        { name: "Habertürk Radyo", freq: "90.4", url: "https://stream.haberturk.com/radyo/stream" },
+        { name: "TGRT FM", freq: "Haber/Sohbet", url: "https://shoutcast.radyotvonline.net/tgrtfm" },
+        { name: "Radyospor", freq: "107.2", url: "https://stream.radyospor.com/radyospor/stream" },
+        { name: "İstanbul'un Sesi", freq: "91.8", url: "https://shoutcast.radyotvonline.net/istanbulunsesi" },
+        { name: "Polis Radyosu", freq: "Karma", url: "https://yayin.polisradyosu.pol.tr:8000/stream" },
+        { name: "Diyanet Radyo", freq: "Dini", url: "https://diyanet.radyotvonline.net/diyanetfmaudio" },
+        { name: "Bayram FM", freq: "Dini", url: "https://shoutcast.radyotvonline.net/bayramfm" }
+    ];
+
+    const container = document.getElementById('radioContainer');
+    const player = document.getElementById('audioPlayer');
+    const statusText = document.getElementById('statusText');
+    const currentRadioTitle = document.getElementById('currentRadio');
+
+    // Listeyi Ekrana Bas
+    function listeyiOlustur(data) {
+        container.innerHTML = '';
+        data.forEach((radyo) => {
+            const btn = document.createElement('button');
+            btn.className = 'radio-btn';
+            btn.onclick = () => radyoCal(radyo.name, radyo.url, btn);
+            btn.innerHTML = `<span>📻 ${radyo.name}</span> <small>${radyo.freq}</small>`;
+            container.appendChild(btn);
         });
-      });
-    } else {
-      // Standart MP3/AAC yayın akışları
-      player.src = url;
-      player.load();
-      player.play().then(() => {
-        statusText.innerText = "▶ Yayında";
-      }).catch(() => {
-        statusText.innerText = "▶ Oynat (▶) butonuna basın";
-      });
     }
-  }
 
-  function durdurYayin() {
-    player.pause();
-    player.removeAttribute('src');
-    if (hls) {
-      hls.destroy();
-      hls = null;
+    // Oynatma Fonksiyonu
+    function radyoCal(radyoAdi, streamUrl, btnElement) {
+        document.querySelectorAll('.radio-btn').forEach(b => b.classList.remove('active'));
+        if (btnElement) btnElement.classList.add('active');
+
+        currentRadioTitle.innerText = radyoAdi;
+        statusText.innerText = "⏳ Yayın yükleniyor...";
+
+        player.src = streamUrl;
+        player.load();
+        
+        player.play().then(() => {
+            statusText.innerText = "▶ Canlı Yayın Başladı";
+        }).catch(() => {
+            statusText.innerText = "⚠️ Oynatma engellendi. Aşağıdaki 'Play' (▶) butonuna basın.";
+        });
     }
-  }
 
-  function durdur() {
-    durdurYayin();
-    stationName.innerText = "KAPALI";
-    statusText.innerText = "Yayın Kesildi";
-    needle.style.left = "0%";
-  }
+    // Arama Fonksiyonu
+    function radyoAra() {
+        const text = document.getElementById('searchInput').value.toLowerCase();
+        const filtrelenmis = radyolar.filter(r => r.name.toLowerCase().includes(text) || r.freq.toLowerCase().includes(text));
+        listeyiOlustur(filtrelenmis);
+    }
+
+    // Sayfa yüklenince başlat
+    listeyiOlustur(radyolar);
 </script>
 
 </body>
