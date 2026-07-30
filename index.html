@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Kadran — Araç Radyosu</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.13/hls.min.js"></script>
+<style>
+:root{
+  --bg:#0a0e13;
+  --bg2:#0f141c;
+  --card:#141b25;
+  --card2:#1b2430;
+  --line:#26313f;
+  --text:#eef3f9;
+  --muted:#8593a5;
+  --accent:#2fe3c7;
+  --accent-2:#17c4aa;
+  --accent-ink:#052b25;
+  --danger:#ff6b5e;
+  --ok:#43e0a0;
+  --warn:#ffce5c;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none;}
+html,body{height:100%; margin:0; overflow:hidden;}
+body{
+  font-family:'Inter',system-ui,sans-serif; color:var(--text);
+  background:radial-gradient(1200px 600px at 20% -10%, #16324a 0%, transparent 55%), linear-gradient(160deg,var(--bg2),var(--bg));
+  padding:calc(8px + var(--safe-top)) 8px calc(8px + var(--safe-bottom));
+}
+.display{font-family:'Space Grotesk',sans-serif;}
+
+.app{display:flex; gap:8px; height:100%;}
+
+/* ---------- SOL: KANAL LİSTESİ ---------- */
+.panel-list{
+  width:40%; min-width:290px; max-width:460px;
+  background:linear-gradient(180deg,var(--card),var(--bg2));
+  border:1px solid var(--line); border-radius:18px; padding:12px;
+  display:flex; flex-direction:column; gap:10px; min-height:0;
+}
+.brand{display:flex; align-items:center; gap:9px; font-weight:800; font-size:16px; letter-spacing:.02em;}
+.brand i{width:30px; height:30px; border-radius:9px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:var(--accent-ink); font-style:normal; font-size:16px; font-weight:800;}
+.brand small{color:var(--muted); font-size:11px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;}
+
+.search{position:relative;}
+.search input{
+  width:100%; padding:12px 14px 12px 40px; border-radius:13px; border:1px solid var(--line);
+  background:var(--card2); color:var(--text); font-family:inherit; font-size:15px; font-weight:600; outline:none; min-height:46px;
+}
+.search input::placeholder{color:var(--muted);}
+.search input:focus{border-color:var(--accent-2); box-shadow:0 0 0 3px rgba(47,227,199,.14);}
+.search svg{position:absolute; left:13px; top:50%; transform:translateY(-50%); width:17px; height:17px; stroke:var(--muted);}
+
+.chips{display:flex; gap:7px; overflow-x:auto; padding-bottom:2px; scrollbar-width:none;}
+.chips::-webkit-scrollbar{display:none;}
+.chip{
+  flex:0 0 auto; background:var(--card2); border:1px solid var(--line); color:var(--muted);
+  padding:9px 15px; border-radius:22px; cursor:pointer; font-weight:700; font-size:13px; min-height:40px; font-family:inherit; white-space:nowrap;
+}
+.chip.active{background:linear-gradient(135deg,var(--accent),var(--accent-2)); border-color:transparent; color:var(--accent-ink);}
+
+.list{flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; margin:-2px -4px -2px 0; padding-right:4px; min-height:0;}
+.list::-webkit-scrollbar{width:5px;}
+.list::-webkit-scrollbar-thumb{background:var(--line); border-radius:6px;}
+
+.item{
+  display:flex; align-items:center; gap:13px; padding:12px 13px; background:var(--card2); border-radius:15px;
+  border:1px solid transparent; cursor:pointer; min-height:64px; transition:border-color .15s, background .15s;
+}
+.item.active{border-color:var(--accent-2); background:linear-gradient(90deg, rgba(47,227,199,.14), var(--card2));}
+.logo{
+  width:46px; height:46px; border-radius:13px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,#22303f,#151d27); color:var(--accent); font-weight:800; font-size:12px; font-family:'Space Grotesk',sans-serif;
+  border:1px solid var(--line);
+}
+.item.active .logo{background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:var(--accent-ink); border-color:transparent;}
+.meta{flex:1; min-width:0;}
+.meta .n{font-weight:700; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.meta .g{font-size:13px; color:var(--muted); font-weight:600;}
+.right{display:flex; flex-direction:column; align-items:flex-end; gap:5px;}
+.freq{font-size:12px; font-weight:800; color:var(--accent); font-family:'Space Grotesk',sans-serif;}
+.star{background:none; border:none; cursor:pointer; padding:4px; color:#3a4756; font-size:20px; line-height:1;}
+.star.on{color:var(--warn);}
+.empty{text-align:center; color:var(--muted); font-size:14px; font-weight:600; padding:26px 0;}
+
+/* ---------- SAĞ: ÇALAR ---------- */
+.panel-now{
+  flex:1; background:linear-gradient(180deg,var(--card),var(--bg2)); border:1px solid var(--line); border-radius:18px;
+  display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+  padding:16px 18px calc(16px + var(--safe-bottom)); gap:10px; position:relative; overflow:hidden; min-width:0;
+}
+.topbar{width:100%; display:flex; align-items:center; justify-content:space-between; color:var(--muted); font-size:13px; font-weight:700;}
+.topbar .live{display:flex; align-items:center; gap:7px; letter-spacing:.12em; text-transform:uppercase; font-size:11px;}
+.dot{width:9px; height:9px; border-radius:50%; background:#3a4756;}
+.dot.on{background:var(--ok); box-shadow:0 0 10px 2px rgba(67,224,160,.6);}
+.clock{font-family:'Space Grotesk',sans-serif; font-size:15px; color:var(--text);}
+
+.disc{
+  width:clamp(120px,24vh,190px); aspect-ratio:1; border-radius:50%; position:relative; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle at 32% 28%, #26374a, #0e1520 70%);
+  border:1px solid var(--line); box-shadow:inset 0 0 30px rgba(0,0,0,.55);
+}
+.disc::before{content:""; position:absolute; inset:-3px; border-radius:50%; padding:3px;
+  background:conic-gradient(from 0deg, transparent, var(--accent), transparent 60%); opacity:0; transition:opacity .3s;
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude;}
+.viz.playing .disc::before{opacity:.9; animation:spin 4s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.disc .code{font-family:'Space Grotesk',sans-serif; font-weight:800; font-size:clamp(20px,4vh,30px); color:var(--accent); letter-spacing:.04em;}
+
+.eq{position:absolute; bottom:16%; display:flex; gap:4px; align-items:flex-end; height:20px; opacity:0; transition:opacity .3s;}
+.viz.playing .eq{opacity:1;}
+.eq span{width:5px; height:100%; background:var(--accent); border-radius:3px; transform:scaleY(.25); transform-origin:bottom;}
+.viz.playing .eq span{animation:eq .9s ease-in-out infinite;}
+.eq span:nth-child(1){animation-delay:0s;} .eq span:nth-child(2){animation-delay:.18s;}
+.eq span:nth-child(3){animation-delay:.36s;} .eq span:nth-child(4){animation-delay:.12s;} .eq span:nth-child(5){animation-delay:.28s;}
+@keyframes eq{0%,100%{transform:scaleY(.25);} 50%{transform:scaleY(1);}}
+
+.viz{display:flex; flex-direction:column; align-items:center; gap:9px; position:relative; width:100%;}
+.now-name{font-size:clamp(20px,3.4vh,30px); font-weight:800; text-align:center; line-height:1.15; max-width:100%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.now-sub{font-size:14px; color:var(--muted); font-weight:600; text-align:center;}
+.status{font-size:13px; font-weight:700; text-align:center; min-height:18px; color:var(--muted);}
+.status.ok{color:var(--ok);} .status.err{color:var(--danger);} .status.wait{color:var(--warn);}
+
+.controls{display:flex; align-items:center; gap:clamp(10px,2.5vw,22px); justify-content:center;}
+.cbtn{
+  border-radius:50%; border:1px solid var(--line); background:var(--card2); color:var(--text); cursor:pointer;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  width:clamp(52px,9vh,66px); height:clamp(52px,9vh,66px);
+}
+.cbtn:active{transform:scale(.93);}
+.cbtn svg{width:44%; height:44%; fill:currentColor;}
+.cbtn.fav-on{color:var(--warn); border-color:var(--warn);}
+.play{
+  width:clamp(74px,13vh,96px); height:clamp(74px,13vh,96px); border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent-2)); color:var(--accent-ink);
+  box-shadow:0 10px 30px -8px rgba(47,227,199,.6);
+}
+.play svg{width:40%; height:40%;}
+
+.vol{display:flex; align-items:center; gap:12px; width:100%; max-width:420px;}
+.vol svg{width:20px; height:20px; stroke:var(--muted); fill:none; flex-shrink:0;}
+.vol input[type=range]{
+  flex:1; -webkit-appearance:none; appearance:none; height:8px; border-radius:5px; outline:none;
+  background:linear-gradient(90deg,var(--accent) 0%, var(--accent) var(--fill,80%), var(--card2) var(--fill,80%));
+}
+.vol input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:#fff; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.5);}
+.vol input[type=range]::-moz-range-thumb{width:24px; height:24px; border:none; border-radius:50%; background:#fff; cursor:pointer;}
+
+/* Küçük / dikey ekranlarda üst-alt yığ */
+@media (max-width:720px), (orientation:portrait){
+  .app{flex-direction:column;}
+  .panel-list{width:100%; max-width:none; min-width:0; max-height:44%;}
+  .panel-now{flex:1;}
+}
+</style>
+</head>
+<body>
+
+<audio id="radioPlayer" preload="none"></audio>
+
+<div class="app">
+  <!-- SOL: LİSTE -->
+  <div class="panel-list">
+    <div class="brand"><i>K</i><div>Kadran <small>Araç Radyosu</small></div></div>
+
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" id="searchInput" placeholder="İstasyon ara..." oninput="renderList()">
+    </div>
+
+    <div class="chips" id="geoFilters">
+      <button class="chip active" onclick="filterType('geo','all',this)">Tümü</button>
+      <button class="chip" onclick="filterType('geo','fav',this)">★ Favoriler</button>
+      <button class="chip" onclick="filterType('geo','national',this)">Ulusal</button>
+      <button class="chip" onclick="filterType('geo','local',this)">Yerel</button>
+      <button class="chip" onclick="filterType('genre','Arabesk',this)">Arabesk</button>
+      <button class="chip" onclick="filterType('genre','Pop',this)">Pop</button>
+      <button class="chip" onclick="filterType('genre','Nostalji',this)">Nostalji</button>
+      <button class="chip" onclick="filterType('genre','Yabancı',this)">Yabancı</button>
+    </div>
+
+    <div class="list" id="stationList"></div>
+  </div>
+
+  <!-- SAĞ: ÇALAR -->
+  <div class="panel-now">
+    <div class="topbar">
+      <div class="live"><span class="dot" id="liveDot"></span><span id="liveText">Hazır</span></div>
+      <div class="clock" id="clock">--:--</div>
+    </div>
+
+    <div class="viz" id="viz">
+      <div class="disc">
+        <div class="code display" id="discCode">FM</div>
+        <div class="eq"><span></span><span></span><span></span><span></span><span></span></div>
+      </div>
+      <div class="now-name display" id="nowName">Kanal seçin</div>
+      <div class="now-sub" id="nowSub">Soldaki listeden bir istasyon seçin</div>
+      <div class="status" id="statusLine"></div>
+    </div>
+
+    <div class="controls">
+      <button class="cbtn" id="favBtn" onclick="toggleFavCurrent()" aria-label="Favori">
+        <svg viewBox="0 0 24 24"><path d="M12 17.3l-6.2 3.6 1.6-7-5.4-4.7 7.1-.6L12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7z"/></svg>
+      </button>
+      <button class="cbtn" onclick="stepStation(-1)" aria-label="Önceki kanal">
+        <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+      </button>
+      <button class="cbtn play" id="playBtn" onclick="togglePlay()" aria-label="Oynat/Durdur">
+        <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="pauseIcon" style="display:none" viewBox="0 0 24 24"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>
+      </button>
+      <button class="cbtn" onclick="stepStation(1)" aria-label="Sonraki kanal">
+        <svg viewBox="0 0 24 24"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg>
+      </button>
+      <button class="cbtn" id="extBtn" style="display:none" onclick="openOfficial()" aria-label="Resmi sitede aç">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+      </button>
+    </div>
+
+    <div class="vol">
+      <svg viewBox="0 0 24 24" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/></svg>
+      <input type="range" id="volumeSlider" min="0" max="100" value="80" oninput="setVolume(this.value)">
+      <svg viewBox="0 0 24 24" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Her istasyonun "urls" dizisi sırayla denenir; ilki bağlanan çalar.
+   Adresler güncel yayın akışlarıdır (TRT live.trt.com.tr + Kral radyotvonline.net). */
+const stations = [
+  {id:1, name:"Kral FM", freq:105.4, type:"national", genre:"Arabesk", query:"Kral FM", short:"KRAL", official:"https://www.kralmuzik.com.tr/radyo/kral-fm",
+    urls:["https://dygmaster.radyotvonline.net/kralfm/playlist.m3u8","https://ssldyg.radyotvonline.com/smil/smil:kralfm.smil/playlist.m3u8","http://kralwmp.radyotvonline.com/;"]},
+  {id:2, name:"Kral Akustik", freq:97.2, type:"national", genre:"Arabesk", query:"Kral Akustik", short:"AKST", official:"https://www.kralmuzik.com.tr",
+    urls:["https://dygmaster.radyotvonline.net/kralakustik/playlist.m3u8","https://ssldyg.radyotvonline.com/smil/smil:kralakustik.smil/playlist.m3u8"]},
+  {id:3, name:"TRT Türkü", freq:99.0, type:"local", genre:"Arabesk", query:"TRT Turku", short:"TRTT", official:"https://www.trtdinle.com",
+    urls:["https://radio-trtturku.live.trt.com.tr/master.m3u8","https://ssl4.radyotvonline.com/radyohome/trtturku.stream_aac/playlist.m3u8"]},
+  {id:4, name:"Kral Pop", freq:94.7, type:"national", genre:"Pop", query:"Kral Pop", short:"KPOP", official:"https://www.kralmuzik.com.tr/radyo/kral-pop",
+    urls:["https://dygmaster.radyotvonline.net/kralpop/playlist.m3u8","https://ssldyg.radyotvonline.com/smil/smil:kralpop.smil/playlist.m3u8","http://kralpopwmp.radyotvonline.com/;"]},
+  {id:5, name:"Kral Rap", freq:101.8, type:"national", genre:"Pop", query:"Kral Rap", short:"RAP", official:"https://www.kralmuzik.com.tr",
+    urls:["https://dygmaster.radyotvonline.net/kralrap/playlist.m3u8","https://ssldyg.radyotvonline.com/smil/smil:kralrap.smil/playlist.m3u8"]},
+  {id:6, name:"Kral 90'lar Pop", freq:103.2, type:"national", genre:"Pop", query:"Kral 90lar", short:"90LR", official:"https://www.kralmuzik.com.tr",
+    urls:["https://dygmaster.radyotvonline.net/kral90lar/playlist.m3u8","https://ssldyg.radyotvonline.com/smil/smil:kral90lar.smil/playlist.m3u8"]},
+  {id:7, name:"TRT FM", freq:91.4, type:"national", genre:"Nostalji", query:"TRT FM", short:"TRTF", official:"https://www.trtdinle.com",
+    urls:["https://radio-trtfm.live.trt.com.tr/master.m3u8","https://ssl4.radyotvonline.com/radyohome/trtfm.stream_aac/playlist.m3u8"]},
+  {id:8, name:"TRT Radyo 1", freq:95.6, type:"national", genre:"Nostalji", query:"TRT Radyo 1", short:"TRT1", official:"https://www.trtdinle.com",
+    urls:["https://radio-trtradyo1.live.trt.com.tr/master.m3u8","https://ssl4.radyotvonline.com/radyohome/trtradyo1.stream_aac/playlist.m3u8"]},
+  {id:9, name:"TRT Nağme", freq:100.7, type:"local", genre:"Nostalji", query:"TRT Nagme", short:"NGME", official:"https://www.trtdinle.com",
+    urls:["https://radio-trtnagme.live.trt.com.tr/master.m3u8","https://ssl4.radyotvonline.com/radyohome/trtnagme.stream_aac/playlist.m3u8"]},
+  {id:10, name:"TRT Radyo 3", freq:88.2, type:"national", genre:"Yabancı", query:"TRT Radyo 3", short:"TRT3", official:"https://www.trtdinle.com",
+    urls:["https://radio-trtradyo3.live.trt.com.tr/master.m3u8","https://ssl4.radyotvonline.com/radyohome/trtradyo3.stream_aac/playlist.m3u8"]},
+  {id:11, name:"Kral World", freq:106.5, type:"national", genre:"Yabancı", query:"Kral World", short:"WRLD", official:"https://www.kralmuzik.com.tr",
+    urls:["https://dygmaster.radyotvonline.net/kralworld/playlist.m3u8","https://ssldyg.radyotvonline.com/smil/smil:kralworld.smil/playlist.m3u8"]},
+  {id:12, name:"TRT Uluslararası", freq:89.0, type:"local", genre:"Yabancı", query:"Voice of Turkey", short:"VOT", official:"https://www.trtdinle.com",
+    urls:[]}
+];
+
+// Yerleşik adresler tükenirse son çare olarak radio-browser üzerinden ara.
+const RB_HOSTS = ["https://de1.api.radio-browser.info","https://de2.api.radio-browser.info","https://nl1.api.radio-browser.info","https://at1.api.radio-browser.info"];
+const resolveCache = {};
+async function resolveStreamUrl(station){
+  if(resolveCache[station.id]) return resolveCache[station.id];
+  for(const host of RB_HOSTS){
+    try{
+      const res = await fetch(`${host}/json/stations/search?name=${encodeURIComponent(station.query)}&country=Turkey&limit=6&hidebroken=true&order=clickcount&reverse=true`);
+      if(!res.ok) continue;
+      const arr = await res.json();
+      if(Array.isArray(arr) && arr.length){
+        const best = arr.find(s=>s.lastcheckok===1) || arr[0];
+        const url = best.url_resolved || best.url;
+        if(url){ resolveCache[station.id] = url; return url; }
+      }
+    }catch(e){ continue; }
+  }
+  return null;
+}
+
+let currentStation = null;
+let isPlaying = false;
+let connected = false;
+let playToken = 0;
+let activeGeo = 'all';
+let activeGenre = 'all';
+let favorites = [];
+let hls = null;
+let visibleStations = [];
+
+const audioPlayer = document.getElementById('radioPlayer');
+const playIcon = document.getElementById('playIcon');
+const pauseIcon = document.getElementById('pauseIcon');
+const liveDot = document.getElementById('liveDot');
+const liveText = document.getElementById('liveText');
+const statusLine = document.getElementById('statusLine');
+const viz = document.getElementById('viz');
+const STATE_KEY = "kadran-radyo-state";
+
+function setStatus(kind, text){
+  statusLine.className = 'status' + (kind ? ' ' + kind : '');
+  statusLine.innerText = text;
+}
+function setLive(on, text){
+  liveDot.classList.toggle('on', on);
+  liveText.innerText = text;
+}
+
+/* Kalıcı durum — standart localStorage. */
+function stateYukle(){
+  try{
+    const raw = localStorage.getItem(STATE_KEY);
+    if(raw){
+      const p = JSON.parse(raw);
+      favorites = p.favorites || [];
+      if(p.volume!==undefined){ document.getElementById('volumeSlider').value = p.volume; }
+    }
+  }catch(e){}
+}
+function stateKaydet(){
+  try{ localStorage.setItem(STATE_KEY, JSON.stringify({favorites, volume: Number(document.getElementById('volumeSlider').value)})); }catch(e){}
+}
+
+function tick(){
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  document.getElementById('clock').innerText = hh + ':' + mm;
+}
+
+function updateVolFill(){
+  const el = document.getElementById('volumeSlider');
+  el.style.setProperty('--fill', el.value + '%');
+}
+
+window.addEventListener('DOMContentLoaded', ()=>{
+  stateYukle();
+  audioPlayer.volume = Number(document.getElementById('volumeSlider').value)/100;
+  updateVolFill();
+  tick(); setInterval(tick, 15000);
+  renderList();
+});
+
+function filterType(cat, val, el){
+  // Tek satır karışık çipler: kategori sıfırlanır, seçilen çip aktifleşir
+  activeGeo = 'all'; activeGenre = 'all';
+  if(cat==='geo') activeGeo = val; else activeGenre = val;
+  document.querySelectorAll('#geoFilters .chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  renderList();
+}
+
+function renderList(){
+  const q = document.getElementById('searchInput').value.trim().toLocaleUpperCase('tr');
+  const list = document.getElementById('stationList');
+  visibleStations = stations.filter(s=>{
+    const matchGeo = activeGeo==='all' ? true : (activeGeo==='fav' ? favorites.includes(s.id) : s.type===activeGeo);
+    const matchGenre = activeGenre==='all' || s.genre===activeGenre;
+    const matchQuery = q==="" || s.name.toLocaleUpperCase('tr').includes(q);
+    return matchGeo && matchGenre && matchQuery;
+  });
+
+  list.innerHTML = "";
+  if(visibleStations.length===0){
+    list.innerHTML = `<div class="empty">Kanal bulunamadı.</div>`;
+    return;
+  }
+  visibleStations.forEach(s=>{
+    const item = document.createElement('div');
+    item.className = 'item' + (currentStation && currentStation.id===s.id ? ' active' : '');
+    item.onclick = ()=>selectStation(s);
+    const isFav = favorites.includes(s.id);
+    item.innerHTML = `
+      <div class="logo">${s.short}</div>
+      <div class="meta">
+        <div class="n">${s.name}</div>
+        <div class="g">${s.genre}</div>
+      </div>
+      <div class="right">
+        <span class="freq">${s.freq.toFixed(1)}</span>
+        <button class="star ${isFav?'on':''}" onclick="event.stopPropagation(); toggleFav(${s.id})">★</button>
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+function toggleFav(id){
+  favorites = favorites.includes(id) ? favorites.filter(f=>f!==id) : [...favorites, id];
+  stateKaydet();
+  renderList();
+  if(currentStation && currentStation.id===id) updateFavButton();
+}
+function toggleFavCurrent(){ if(currentStation) toggleFav(currentStation.id); }
+function updateFavButton(){
+  document.getElementById('favBtn').classList.toggle('fav-on', currentStation && favorites.includes(currentStation.id));
+}
+
+/* Önceki / sonraki kanal — görünen liste içinde döner. */
+function stepStation(dir){
+  let base = (visibleStations.length && currentStation && visibleStations.some(s=>s.id===currentStation.id)) ? visibleStations : (visibleStations.length ? visibleStations : stations);
+  if(!base.length) return;
+  let idx = currentStation ? base.findIndex(s=>s.id===currentStation.id) : -1;
+  idx = (idx + dir + base.length) % base.length;
+  selectStation(base[idx]);
+}
+
+function selectStation(station){
+  currentStation = station;
+  stopPlayback();
+  document.getElementById('nowName').innerText = station.name;
+  document.getElementById('nowSub').innerText = station.genre + ' · ' + station.freq.toFixed(1) + ' · ' + (station.type==='local' ? 'Yerel' : 'Ulusal');
+  document.getElementById('discCode').innerText = station.short;
+  updateFavButton();
+  renderList();
+  document.getElementById('extBtn').style.display = 'none';
+  startPlayback();
+}
+
+function openOfficial(){
+  if(currentStation && currentStation.official) window.open(currentStation.official, '_blank');
+}
+
+function togglePlay(){
+  if(!currentStation){ setStatus('err','Önce bir kanal seçin.'); return; }
+  if(isPlaying){ stopPlayback(); } else { startPlayback(); }
+}
+
+/* Tek adresi dener: ses akarsa true, hata/zaman aşımında false. */
+function playOne(url, token){
+  return new Promise(resolve=>{
+    let settled = false;
+    const finish = (ok)=>{
+      if(settled) return; settled = true;
+      clearTimeout(timer);
+      audioPlayer.removeEventListener('playing', onPlaying);
+      audioPlayer.removeEventListener('error', onError);
+      resolve(ok);
+    };
+    const onPlaying = ()=> finish(true);
+    const onError   = ()=> finish(false);
+    const timer = setTimeout(()=> finish(false), 9000);
+    audioPlayer.addEventListener('playing', onPlaying);
+    audioPlayer.addEventListener('error', onError);
+
+    if(hls){ try{ hls.destroy(); }catch(e){} hls = null; }
+
+    if(url.includes('.m3u8') && window.Hls && Hls.isSupported()){
+      hls = new Hls({ enableWorker:true, lowLatencyMode:false });
+      hls.on(Hls.Events.ERROR, (e, data)=>{ if(data && data.fatal) finish(false); });
+      hls.on(Hls.Events.MANIFEST_PARSED, ()=>{
+        if(token!==playToken) return finish(false);
+        audioPlayer.play().catch(()=> finish(false));
+      });
+      hls.loadSource(url);
+      hls.attachMedia(audioPlayer);
+    }else{
+      audioPlayer.src = url;
+      audioPlayer.load();
+      audioPlayer.play().catch(()=> finish(false));
+    }
+  });
+}
+
+async function startPlayback(){
+  if(!currentStation) return;
+  const station = currentStation;
+  const token = ++playToken;
+  connected = false;
+  setLive(false,'Bağlanıyor');
+  setStatus('wait','Bağlanıyor...');
+
+  for(const url of (station.urls || [])){
+    if(token!==playToken) return;
+    const ok = await playOne(url, token);
+    if(token!==playToken) return;
+    if(ok){ onConnected(); return; }
+  }
+  setStatus('wait','Yayın adresi aranıyor...');
+  const resolved = await resolveStreamUrl(station);
+  if(token!==playToken) return;
+  if(resolved){
+    setStatus('wait','Bağlanıyor...');
+    const ok = await playOne(resolved, token);
+    if(token!==playToken) return;
+    if(ok){ onConnected(); return; }
+  }
+  showConnectionError(station);
+}
+
+function onConnected(){
+  isPlaying = true; connected = true;
+  setStatus('ok','Canlı yayında');
+  setLive(true,'Canlı');
+  playIcon.style.display = 'none';
+  pauseIcon.style.display = 'block';
+  viz.classList.add('playing');
+}
+
+function showConnectionError(station){
+  isPlaying = false; connected = false;
+  resetIcons();
+  setStatus('err','Bağlantı yok — resmi siteden dinleyin');
+  setLive(false,'Hata');
+  if(station.official) document.getElementById('extBtn').style.display = 'flex';
+}
+
+function stopPlayback(){
+  playToken++;
+  try{ audioPlayer.pause(); }catch(e){}
+  if(hls){ try{ hls.destroy(); }catch(e){} hls = null; }
+  const wasConnected = connected;
+  isPlaying = false; connected = false;
+  resetIcons();
+  if(currentStation && wasConnected){ setStatus('','Durduruldu'); setLive(false,'Durdu'); }
+}
+function resetIcons(){
+  playIcon.style.display = 'block';
+  pauseIcon.style.display = 'none';
+  viz.classList.remove('playing');
+}
+
+audioPlayer.addEventListener('waiting', ()=>{ if(connected){ setStatus('wait','Arabelleğe alınıyor...'); } });
+audioPlayer.addEventListener('playing', ()=>{ if(connected){ setStatus('ok','Canlı yayında'); } });
+audioPlayer.addEventListener('error', ()=>{
+  if(!connected) return;
+  isPlaying = false; connected = false;
+  setStatus('err','Yayın kesildi — oynata basın');
+  setLive(false,'Kesildi');
+  resetIcons();
+});
+
+function setVolume(v){
+  audioPlayer.volume = v/100;
+  updateVolFill();
+  stateKaydet();
+}
+</script>
+</body>
+</html>
